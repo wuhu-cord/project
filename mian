@@ -1,0 +1,136 @@
+#include <SDL3/SDL.h>
+#include <stdio.h>
+#include<SDL3_image/SDL_image.h>
+#include <SDL3_ttf/SDL_ttf.h>
+#include<SDL3/SDL_test_font.h>
+#include"timer.h"
+
+SDL_Texture* RenderText(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color) {
+    SDL_Surface* surface =TTF_RenderUTF8_Solid(font, text, color);
+    if (!surface) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "文本渲染失败:");
+        return NULL;
+    }
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_DestroySurface(surface);
+    return texture;
+}
+int main(int argc, char* argv[])
+{
+	SDL_Init(SDL_INIT_VIDEO);
+    TTF_Font* font = NULL;
+    Timer timer;
+    char timer_text[30];
+    SDL_Window* window = SDL_CreateWindow(
+        "SDL3 色块示例",
+        600,                    
+        600,                     
+        0                       
+    );
+    if (window == NULL)
+    {
+        printf("创建窗口失败: %s\n", SDL_GetError());
+        SDL_Quit();
+        return 1;
+    }
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
+    if (renderer == NULL)
+    {
+        printf("创建渲染器失败: %s\n", SDL_GetError());
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+    font = TTF_OpenFont("simhei", 24);
+	Timer_Init(&timer);
+    int background[20][10] = { 1,0,0,1,1,0,1,0,0,1,0,1,1,0,1,1,0,0,1,0,1,0,0,1,1,1,0,0,1,0,0,1,1,0,1,0,1,0,0,1,1,0,0,1,0,1,1,0,1,0,1,0,0,1,1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1,0,1,1,0,0,1,1,0,1,0,1,0,0,1,1,0,1,0,0,1,0,1,1,0,0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0,1,0,1,0,0,1,1,0,1,0,0,1,0,1,1,0,0,1,1,0,1,0,1,0,0,1,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1,0,1,1,0,0,1,1,0,1,0,1,0,0,1,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,0,1,1,0};
+    bool running = true;
+    SDL_Event event;
+    while (running)
+    {
+        while (SDL_PollEvent(&event))
+        {
+            if (event.type == SDL_EVENT_QUIT)
+            {
+                running = false;
+            }
+            else if(event.type == SDL_EVENT_KEY_DOWN)
+			{
+				if (event.key.key == SDLK_SPACE)
+				{
+					Timer_Start(&timer);
+				}
+             }
+           
+        }
+
+        // 清空渲染器（黑色背景）
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // RGBA：黑色，不透明
+        SDL_RenderClear(renderer);
+         double elapsed = Timer_GetElapsedSeconds(&timer);  // 获取当前计时
+        snprintf(timer_text, sizeof(timer_text), "时间: %.2f 秒", elapsed);
+        SDL_Color text_color = {255, 255, 255, 255};  // 白色文本
+        SDL_Texture* text_tex = RenderText(renderer, font, timer_text, text_color);
+        
+        if (text_tex) {
+            float w, h;
+            if (SDL_GetTextureSize(text_tex, &w, &h) != 0) {
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "无法获取纹理大小: %s", SDL_GetError());
+            }
+            SDL_FRect text_rect = {10.0f, 15.0f, (float)w, (float)h};  // 顶部显示
+            SDL_RenderTexture(renderer, text_tex, NULL, &text_rect);
+            SDL_DestroyTexture(text_tex);
+        }
+
+        // 绘制操作提示
+        SDL_Color hint_color = {0, 255, 0, 255};  // 绿色提示
+        SDL_Texture* hint_tex = RenderText(renderer, font, "空格: 开始/暂停 | R: 重置", hint_color);
+        if (hint_tex) {
+            int w, h;
+            int SDL_QueryTexture(SDL_Texture * texture,
+                Uint32 * format,
+                int* access,
+                int* w,
+                int* h);
+            SDL_FRect hint_rect = {10.0f, 45.0f, (float)w, (float)h};  // 计时器下方
+            SDL_RenderTexture(renderer, hint_tex, NULL, &hint_rect);
+            SDL_DestroyTexture(hint_tex);
+        }
+                for (int i = 0; i < 20; i++)
+            {
+            for (int j = 0; j < 10; j++)
+            {
+                if (background[i][j] == 1)
+                {
+
+                    SDL_FRect colorBlock;
+                    colorBlock.x = (float)(j * 30);  // 列索引×30像素（x坐标）
+                    colorBlock.y = (float)(i * 30+60);  // 行索引×30像素（y坐标）
+                    colorBlock.w = 30.0f;            // 宽度30像素
+                    colorBlock.h = 30.0f;            // 高度30像素
+
+                    // 设置色块颜色（这里用蓝色，可修改RGBA值调整颜色）
+                    // 参数：渲染器, R(红), G(绿), B(蓝), A(透明度，255为不透明)
+                    SDL_SetRenderDrawColor(renderer, 0, 128, 255, 255);
+
+                    // 绘制填充矩形（色块）
+                    SDL_RenderFillRect(renderer, &colorBlock);
+
+                    // 可选：绘制矩形边框（黑色边框，区分色块）
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // 边框颜色：黑色
+                    SDL_RenderRect(renderer, &colorBlock);  // 绘制边框
+                }
+            }
+        }
+
+        // 刷新屏幕，显示绘制内容
+        SDL_RenderPresent(renderer);
+    }
+
+    // 释放资源
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();  // 关闭SDL
+
+    return 0;
+}
